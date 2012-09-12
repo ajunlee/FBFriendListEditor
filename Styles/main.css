@@ -1,0 +1,51 @@
+body {
+    padding-top:50px;
+}
+.graybox{ 
+    padding:5px;
+}
+.scrollbox{
+    overflow:auto;
+    height:560px;
+    z-index:99999;
+}
+#divFriendList{
+    overflow:auto;
+    height:560px;
+}
+#divFriend li:hover {
+    background-color:#FFFFFF;
+    border:solid 1px #FFCCCC;
+}
+#divFriend li {
+    background-color:#FFFFFF;
+    border:solid 1px #CCCCCC;
+    list-style:none;
+    margin:2px;
+    cursor:move;
+}
+
+#divEditContent{
+    height:355px;
+    overflow:auto;
+}
+#divEditContent li{
+    background-color:#FFFFFF;
+    border:solid 1px #CCCCCC;
+    list-style:none;
+    margin:2px;
+}
+
+#divFriendList li:hover {
+}
+#divFriendList li {
+    margin:2px;
+}
+
+#divMsgReceiver{
+    border:solid 1px gray;
+    height:30px;
+}
+#divMsgReceiver:hover{
+    border:solid 1px #EFFFEF;
+}

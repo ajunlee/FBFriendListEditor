@@ -1,0 +1,24 @@
+application: fbfriendlisteditor
+version: 1
+runtime: python
+api_version: 1
+
+handlers:
+- url: /favicon\.ico
+  static_files: favicon.ico
+  upload: favicon\.ico
+
+- url: /Styles
+  static_dir: Styles
+
+- url: /Scripts
+  static_dir: Scripts
+
+- url: /Images
+  static_dir: images
+
+- url: /Statics
+  static_dir: Statics
+
+- url: .*
+  script: main.py
