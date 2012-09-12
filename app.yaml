@@ -15,7 +15,7 @@ handlers:
   static_dir: Scripts
 
 - url: /Images
-  static_dir: Images
+  static_dir: images
 
 - url: /Statics
   static_dir: Statics
