@@ -11,13 +11,15 @@ window.fbAsyncInit = function () {
         channelUrl: _channelFile,
         status: true,
         cookie: true,
-        xfbml: false
+        xfbml: true
     });
 
     FB.getLoginStatus(function (response) {
         if (response.status === 'connected') {
             _currentUid = response.authResponse.userID;
             _accessToken = response.authResponse.accessToken;
+            loadFriendLists();
+            loadFriends();
             ShowMyInfo();
         } else {
             ShowLoginInfo();
@@ -34,52 +36,31 @@ window.fbAsyncInit = function () {
 } (document));
 
 jQuery(document).ready(function () {
-    jQuery("#btnLogin").bind("click", function () {
-        FB.login(function (response) {
-            if (response.authResponse) {
-                _currentUid = response.authResponse.id;
-                ShowMyInfo();
-            } else {
-                _currentUid = "";
-                _currentUserName = "";
-                ShowLoginInfo();
-            }
-
-        }, { scope: 'email,user_status,manage_friendlists,read_friendlists' });
-        return false;
-    });
-
-    jQuery("#btnLogout").bind("click", function () {
-        FB.logout(function (response) {
-            _currentUid = "";
-            _currentUserName = "";
-            ShowLoginInfo();
-        });
-        return false;
-    });
-
+    jQuery("#btnLogin").bind("click", handlerLogin);
+    jQuery("#btnMLogin").bind("click", handlerLogin);
+    jQuery("#btnLogout").bind("click", handlerLogout);
     jQuery("#btnNewList").bind("click", handlerNewList);
     jQuery("#btnDeleteList").bind("click", handlerDeleteList);
     jQuery("#btnUpdateList").bind("click", handlerUpdateList);
-    jQuery("#btnFriendList").bind("click", function () {
-        loadFriendLists("divFriendList");
-        loadFriends("divFriend");
-        return false;
-    })
+    jQuery("#btnFriendList").bind("click", handlerFriendList);
 
     $("#divMsgReceiver").droppable({
         activeClass: "ui-state-default",
         hoverClass: "ui-state-hover",
         accept: ":not(.ui-sortable-helper)",
         drop: function (event, ui) {
-            var _memberId = ui.draggable.find("a").attr("id");
-            var _memberName = ui.draggable.find("a").text();
+            if (_currentListId != "") {
+                var _memberId = ui.draggable.find("a").attr("id");
+                var _memberName = ui.draggable.find("a").text();
 
-            if (_memberId in _memberList) {
-                ShowMessage("This user already exists");
+                if (_memberId in _memberList) {
+                    ShowMessage("This user already exists");
+                } else {
+                    jQuery("#olFriends").prepend(genMemberObj(_memberId, _memberName, true));
+                    FBAddMember(_currentListId, _memberId, _memberName);
+                }
             } else {
-                jQuery("#olFriends").prepend(genMemberObj(_memberId, _memberName));
-                FBAddMember(_currentListId, _memberId, _memberName);
+                alert("Please pick one list or create a new one first.");
             }
         }
     })
@@ -87,14 +68,16 @@ jQuery(document).ready(function () {
 
 function ShowLoginInfo() {
     if (_currentUid != "") {
-        jQuery("#iLogin").hide();
         jQuery("#iLogout").show();
-        jQuery("#divUserInfo").show();
-        jQuery("#divUserInfo").append(genProfileImg(_currentUid)).append(jQuery("<span />").text(_currentUserName));
+        jQuery("#divUserInfo").html("");
+        jQuery("#divUserInfo").append(genProfileImg(_currentUid,_currentUserName)).show();
+        jQuery("#loginPanel").hide();
+        jQuery("#editPanel").show();
     } else {
-        jQuery("#iLogin").show();
         jQuery("#iLogout").hide();
         jQuery("#divUserInfo").html("").hide();
+        jQuery("#loginPanel").show();
+        jQuery("#editPanel").hide();
     }
 }
 
@@ -107,75 +90,77 @@ function handleAuthResponseChange(response) {
 
     }
 }
+function handlerLogin() {
+    FB.login(function (response) {
+        if (response.authResponse) {
+            _currentUid = response.authResponse.id;
+            loadFriendLists();
+            loadFriends();
+            ShowMyInfo();
+        } else {
+            _currentUid = "";
+            _currentUserName = "";
+            ShowLoginInfo();
+        }
 
-function handlerFriendClick() {
+    }, { scope: 'email,user_status,manage_friendlists,read_friendlists' });
+    return false;
+}
+function handlerLogout() {
+    FB.logout(function (response) {
+        _currentUid = "";
+        _currentUserName = "";
+        _currentListId = "";
+        _currentListName = "";
+        loadForm();
+        loadFriendLists();
+        loadFriends();
+        loadMembers();
+        ShowLoginInfo();
+    });
+    return false;
+}
+function handlerFriendList() {
+    loadFriendLists();
+    loadFriends();
+    return false;
+}
+function handlerFriendListClick() {
     _currentListId = jQuery(this).attr("id");
     _currentListName = jQuery(this).text();
-    jQuery("#tbxFriendListId").val(_currentListId);
-    jQuery("#tbxFriendListName").val(_currentListName);
+    loadForm();
     loadMembers();
+    ShowMessage("drag and drop your friend to here.");
     return false;
 }
 
 function handlerNewList() {
     var _listName = prompt("Please input the list name");
     if ((_listName !== null) && (_listName != "")) {
-        FB.api("/me/friendlists", "post", { "name": _listName }, function (response) {
-            if (!response || response.error) {
-                ShowMessage('Error occured');
-            } else {
-                _currentListName = _listName;
-                _currentListId = response.id;
-                loadForm();
-                loadMembers();
-                loadFriendLists("divFriendList");
-            }
-        });
+        _currentListId = "";
+        _currentListName = _listName;
+        FBUpdateFList(_listName);
     }
     return false;
 }
 function loadForm() {
-    jQuery("#tbxFriendListId").val(_currentListId);
-    jQuery("#tbxFriendListName").val(_currentListName);
-}
-function clearForm() {
-    jQuery("#tbxFriendListId").val("");
-    jQuery("#tbxFriendListName").val("");
+    jQuery("#lblListName").text("List Name : " + _currentListName);
 }
 
 function handlerDeleteList() {
     if (confirm("Do you want to delete this list?")) {
-        FB.api("/" + _currentListId, "delete", function (response) {
-            _currentListId = "";
-            _currentListName = "";
-            if (!response || response.error) {
-                ShowMessage('Error occured');
-            } else {
-                ShowMessage('list deleted');
-                loadForm();
-                loadFriendLists("divFriendList");
-                loadMembers();
-            }
-        });
+        FBDeleteFList(_currentListId,"","");
     }
     return false;
 }
 function handlerUpdateList() {
-    var _listId = "";
-    if (jQuery("#tbxFriendListName").val() == "") {
+    var _listName = prompt("Please input the list name");
+    if (_listName == "") {
         alert("Please input the List Name first.");
-        return;
-    }
-    if (jQuery("#tbxFriendListId").val() != "") {
-        _listId = FBAddFList(jQuery("#tbxFriendListName").val());
-        if (_listId != "") {
-            ShowMessage("List Added");
-        } else {
-            ShowMessage("encounter some problems.");
-        }
     } else {
-        _listId = jQuery("#tbxFriendListId").val();
+        FBUpdateFList(_listName);
     }
+    return;
 }
 
 function ShowMessage(msg) {
@@ -186,7 +171,7 @@ function ShowMessage(msg) {
 function FBAddMember(listId, memberId, memberName) {
     FB.api("/" + listId + "/members/" + memberId, "post", function (response) {
         if (!response || response.error) {
-            ShowMessage("Add failed");
+            ShowMessage(response.error.message);
         } else {
             _memberList[memberId] = memberName;
             ShowMessage("Added");
@@ -197,22 +182,51 @@ function FBDeleteMember(listId, userId) {
     delete _memberList[userId];
     FB.api("/" + listId + "/members/" + userId, "delete", function (response) {
         if (!response || response.error) {
-            ShowMessage("Delete fail");
+            ShowMessage(response.error.message);
         } else {
             ShowMessage("Deleted");
         }
     });
 }
-function FBAddFList(listName) {
+function FBUpdateFList(listName) {
     FB.api("/me/friendlists", "post", { "name": listName }, function (response) {
         if (!response || response.error) {
-            return "";
+            ShowMessage(response.error.message);
         } else {
-            return response.id;
+            var _listId = response.id;
+            if (_currentListId != "") {
+                //Can't find the update method in FB API,
+            	//so, change the update to copy...
+            	//TODO : add those members to this list.
+                for (var mbr in _memberList) {
+                    FBAddMember(_listId, mbr, _memberList[mbr]);
+                }
+                ShowMessage("List Updated");
+            } else {
+                ShowMessage("List Added");
+            }
+            _currentListId = _listId;
+            _currentListName = listName;
+            loadForm();
+            loadMembers();
+            loadFriendLists();
         }
     });
 }
-
+function FBDeleteFList(listId,newListId,newListName) {
+    FB.api("/" + listId, "delete", function (response) {
+        if (!response || response.error) {
+            ShowMessage(response.error.message);
+        } else {
+            _currentListId = newListId;
+            _currentListName = newListName;
+            ShowMessage('list deleted');
+            loadForm();
+            loadFriendLists();
+            loadMembers();
+        }
+    });
+}
 function ShowMyInfo() {
     FB.api('/me', function (response) {
         _currentUid = response.id;
@@ -221,72 +235,72 @@ function ShowMyInfo() {
     });
 }
 
-function loadFriendLists(objId) {
-    FB.api("/me/friendlists", function (response) {
-        var _ulObj = jQuery("<ul />");
-        for (var i = 0; i < response.data.length; i++) {
-            var _link = jQuery("<a />").attr("id", response.data[i].id).text(response.data[i].name);
-            _link.attr("href", "#");
-            _link.bind("click", handlerFriendClick);
-            _ulObj.append(jQuery("<li />").append(_link));
-        }
-        jQuery("#" + objId).html("");
-        jQuery("#" + objId).append(_ulObj);
-    });
-}
-
-function loadMembers() {
-    if (_currentListId != "") {
-        _memberList = {};
-        FB.api("/" + _currentListId + "/members", function (response) {
-            var _ulObj = jQuery("#olFriends");
-            _ulObj.html("");
+function loadFriendLists() {
+    jQuery("#divFriendList").html("");
+    if (_currentUid != "") {
+        FB.api("/me/friendlists", function (response) {
+            var _ulObj = jQuery("<ul />");
             for (var i = 0; i < response.data.length; i++) {
-                _ulObj.append(genMemberObj(response.data[i].id, response.data[i].name));
-                _memberList[response.data[i].id] = response.data[i].name;
+                var _link = jQuery("<a />").attr("id", response.data[i].id).text(response.data[i].name);
+                _link.attr("href", "#");
+                _link.bind("click", handlerFriendListClick);
+                _ulObj.append(jQuery("<li />").append(_link));
             }
+            jQuery("#divFriendList").html("");
+            jQuery("#divFriendList").append(_ulObj);
         });
-    } else {
-        var _ulObj = jQuery("#olFriends");
-        _ulObj.html("");
     }
 }
 
-function loadFriends(objId) {
-    FB.api("/me/friends", function (response) {
-        var _ulObj = jQuery("<ul />");
-        for (var i = 0; i < response.data.length; i++) {
-            var _iObj = jQuery("<li />");
-            var _link = jQuery("<a />").attr("id", response.data[i].id).text(response.data[i].name);
-            _link.attr("href", "#");
-            _iObj.append(genProfileImg(response.data[i].id));
-            _iObj.append(_link);
-            _ulObj.append(_iObj);
-        }
-        jQuery("#" + objId).html("");
-        jQuery("#" + objId).append(_ulObj);
-
-        $("#" + objId + " li").draggable({ revert: true,
-            cursor: "move"
+function loadMembers() {
+    var _ulObj = jQuery("#olFriends");
+    _ulObj.html("");
+    if (_currentListId != "") {
+        _memberList = {};
+        FB.api("/" + _currentListId + "/members", function (response) {
+            for (var i = 0; i < response.data.length; i++) {
+                _ulObj.append(genMemberObj(response.data[i].id, response.data[i].name,true));
+                _memberList[response.data[i].id] = response.data[i].name;
+            }
         });
-    });
+    }
 }
 
-function genProfileImg(userId) {
-    return jQuery("<img width=\"40\" />").attr("src", 'https://graph.facebook.com/' + userId + '/picture?type=square');
+function loadFriends() {
+    jQuery("#divFriend").html("");
+    if (_currentUid != "") {
+        FB.api("/me/friends", function (response) {
+            var _ulObj = jQuery("<ul />");
+            for (var i = 0; i < response.data.length; i++) {
+                _ulObj.append(genMemberObj(response.data[i].id, response.data[i].name,false));
+            }
+            jQuery("#divFriend").append(_ulObj);
+            $("#divFriend li").draggable({ revert: true,
+                cursor: "move"
+            });
+        });
+    }
 }
-function genMemberObj(memberId, memberName) {
+
+function genProfileImg(userId,userName) {
+    var _img = jQuery("<img width=\"40\" alt=\"" + userName + "\" title=\"" + userName + "\" />").attr("src", 'https://graph.facebook.com/' + userId + '/picture?type=square');
+    return _img;
+}
+
+function genMemberObj(memberId, memberName, showDelIcon) {
     var _liObj = jQuery("<li class=\"span2\" />");
     var _link = jQuery("<a />").attr("id", memberId).text(memberName);
-    var _delIcon = jQuery("<a href=\"#\" class=\"pull-right\"><i class=\"icon-remove\"></i></a>").bind("click", function () {
-        var _memberId = jQuery(this).parent().find("a").attr("id");
-        if (_memberId != "") {
-            FBDeleteMember(_currentListId, _memberId);
-            jQuery(this).parent().remove();
-        }
-    });
-    _liObj.append(genProfileImg(memberId));
+    _liObj.append(genProfileImg(memberId,memberName));
     _liObj.append(_link);
-    _liObj.append(_delIcon);
+    if (showDelIcon) {
+        var _delIcon = jQuery("<a href=\"#\" class=\"pull-right\"><i class=\"icon-remove\"></i></a>").bind("click", function () {
+            var _memberId = jQuery(this).parent().find("a").attr("id");
+            if (_memberId != "") {
+                FBDeleteMember(_currentListId, _memberId);
+                jQuery(this).parent().remove();
+            }
+        });
+        _liObj.append(_delIcon);
+    }
     return _liObj
 }

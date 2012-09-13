@@ -17,14 +17,10 @@
         <div class="navbar-inner">
             <div class="container">
                 <a class="brand" href="/">My Friend List Editor</a>
-                    <ul class="nav">
-                        <li><a href="#" id="btnFriendList">Friend List</a></li>
-                    </ul>
                 <div class="nav-pills pull-right">
                 <ul class="nav">
-                <li class="hide" id="iLogin"><a id="btnLogin" href="#">Login</a></li>
-                <li class="hide" id="iLogout"><a id="btnLogout" href="#">Logout</a></li>
-                    </ul>
+                    <li class="hide" id="iLogout"><a id="btnLogout" href="#"><i class="icon-off"></i> Logout</a></li>
+                </ul>
                 </div>
                 <div id="divUserInfo" class="pull-right"></div>
             </div>
@@ -32,26 +28,31 @@
     </div>
 
  <div class="container">
-        <div class="row">
+        <div class="row hide" id="loginPanel">
             <div class="span12">
-                <div id="mainContent"></div>
+                <div id="mainContent">
+                <div class="hero-unit">
+                    <h2>Facebook Friend List Editor</h2>
+                    Please login to manage your friend list.<br />
+                    <button id="btnMLogin" class="btn btn-large btn-primary"> <i class="icon-off"></i> Login  </button>
+                </div>
+                </div>
             </div>
         </div>
-        <div class="row">
-
+        <div class="row hide" id="editPanel">
             <div class="span2">
                 <div class="well graybox"><h3>Friend Lists</h3>
-	                <div id="divFriendList"></div>
+                <div id="divFriendList"></div>
                 </div>
+                
             </div>
 
             <div class="span7">
             <div class="well" id="divEditForm">
-List Id : <input type="text" class="uneditable-input" id="tbxFriendListId" /><br />
-List Name : <input type="text" id="tbxFriendListName" /><br />
 <button class="btn" id="btnNewList"> New </button>
-<button class="btn" id="btnUpdateList"> Update </button>
+<button class="btn" id="btnUpdateList"> Copy </button>
 <button class="btn" id="btnDeleteList"> Delete </button>
+<span id="lblListName" class="span3">List Name : </span>
             </div>
 
 <div id="divMsgReceiver" class="alert">drag and drop your friend to here.</div>
